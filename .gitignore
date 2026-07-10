@@ -1,0 +1,9 @@
+*.iml
+.dart_tool/
+.flutter-plugins
+.packages
+.pub-cache/
+build/
+.pub/
+ios/Pods/
+**/.dart_tool/
