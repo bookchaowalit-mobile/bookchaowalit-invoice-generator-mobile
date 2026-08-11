@@ -7,3 +7,5 @@ build/
 .pub/
 ios/Pods/
 **/.dart_tool/
+.idea/
+.flutter-plugins-dependencies
