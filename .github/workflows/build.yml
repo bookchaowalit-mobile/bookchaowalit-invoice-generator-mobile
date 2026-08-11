@@ -1,35 +1,49 @@
-name: Build Mobile App
+name: Validate Flutter Mobile RC
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-rc-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  analyze:
-    name: Analyze & Test
+  validate:
+    name: Analyze & Test (fail-closed)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.24.0'
+          channel: 'stable'
           cache: true
-      - run: flutter pub get
-      - run: flutter analyze || true
-      - run: flutter test || true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
 
-  build-android:
-    name: Build Android APK
-    needs: analyze
+  build-android-debug:
+    name: Debug APK (main only)
+    needs: validate
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.24.0'
+          channel: 'stable'
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --debug || true
+      - name: Build debug APK
+        run: flutter build apk --debug
