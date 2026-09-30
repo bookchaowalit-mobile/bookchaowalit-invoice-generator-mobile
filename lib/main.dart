@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+
+import 'screens/about_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/explore_screen.dart';
-import 'screens/profile_screen.dart';
 
 void main() {
   runApp(const InvoiceGeneratorApp());
@@ -14,6 +14,7 @@ class InvoiceGeneratorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Invoice Generator',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorSchemeSeed: Colors.deepPurple,
         useMaterial3: true,
@@ -31,25 +32,28 @@ class InvoiceGeneratorApp extends StatelessWidget {
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
+
   @override
   State<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
-  final _pages = const [HomeScreen(), ExploreScreen(), ProfileScreen()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_index],
+      body: IndexedStack(
+        index: _index,
+        children: const [HomeScreen(), AboutScreen()],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.explore), label: 'Explore'),
-          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+              icon: Icon(Icons.receipt_long), label: 'Invoice'),
+          NavigationDestination(icon: Icon(Icons.info_outline), label: 'About'),
         ],
       ),
     );
