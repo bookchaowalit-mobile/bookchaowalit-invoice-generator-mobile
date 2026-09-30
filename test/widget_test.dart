@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:invoice_generator/main.dart';
 import 'package:invoice_generator/screens/home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('Invoice Generator app builds with about tab', (tester) async {
     await tester.pumpWidget(const InvoiceGeneratorApp());
     await tester.pump();
@@ -21,6 +24,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: HomeScreen(clock: () => DateTime(2026, 9, 30))),
     );
+    await tester.pumpAndSettle();
     String total() => tester.widget<Text>(find.byKey(const Key('total'))).data!;
     expect(total(), 'Total 0.00');
 

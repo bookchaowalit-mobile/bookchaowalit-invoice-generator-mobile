@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'data/draft_repository.dart';
 import 'screens/about_screen.dart';
 import 'screens/home_screen.dart';
 
@@ -45,7 +46,10 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [HomeScreen(), AboutScreen()],
+        children: const [
+          HomeScreen(repository: deviceDraftRepository),
+          AboutScreen(),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

@@ -18,6 +18,68 @@ class LineItem {
   final int unitPriceCents;
 
   int get amountCents => quantity * unitPriceCents;
+
+  Map<String, Object?> toJson() => {
+        'description': description,
+        'quantity': quantity,
+        'unitPriceCents': unitPriceCents,
+      };
+
+  /// Throws on wrong types or invalid quantity/price.
+  static LineItem fromJson(Map<String, Object?> json) => LineItem(
+        description: json['description'] as String,
+        quantity: json['quantity'] as int,
+        unitPriceCents: json['unitPriceCents'] as int,
+      );
+}
+
+/// The invoice being edited: header fields, rate inputs (as typed) and items.
+class InvoiceDraft {
+  const InvoiceDraft({
+    this.number = 'INV-0001',
+    this.billTo = '',
+    this.discount = '',
+    this.tax = '7',
+    this.items = const [],
+  });
+
+  final String number;
+  final String billTo;
+
+  /// Discount and tax are kept as the user typed them so an in-progress,
+  /// not-yet-valid value is restored exactly.
+  final String discount;
+  final String tax;
+  final List<LineItem> items;
+
+  Map<String, Object?> toJson() => {
+        'number': number,
+        'billTo': billTo,
+        'discount': discount,
+        'tax': tax,
+        'items': [for (final i in items) i.toJson()],
+      };
+
+  /// Malformed line items are skipped; a malformed header throws.
+  static InvoiceDraft fromJson(Map<String, Object?> json) {
+    final items = <LineItem>[];
+    for (final raw in (json['items'] as List? ?? const []).whereType<Map>()) {
+      try {
+        items.add(LineItem.fromJson(Map<String, Object?>.from(raw)));
+      } on TypeError {
+        continue;
+      } on ArgumentError {
+        continue;
+      }
+    }
+    return InvoiceDraft(
+      number: json['number'] as String? ?? 'INV-0001',
+      billTo: json['billTo'] as String? ?? '',
+      discount: json['discount'] as String? ?? '',
+      tax: json['tax'] as String? ?? '7',
+      items: items,
+    );
+  }
 }
 
 class InvoiceTotals {

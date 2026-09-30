@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/draft_repository.dart';
 import '../logic/invoice.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.clock = DateTime.now});
+  const HomeScreen({super.key, this.clock = DateTime.now, this.repository});
 
   final DateTime Function() clock;
+
+  /// Where the draft is stored. Defaults to an in-memory store (tests); the
+  /// app passes [deviceDraftRepository].
+  final DraftRepository? repository;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -22,6 +27,73 @@ class _HomeScreenState extends State<HomeScreen> {
   final _discount = TextEditingController();
   final _tax = TextEditingController(text: '7');
   String? _itemError;
+  late final DraftRepository _repository =
+      widget.repository ?? InMemoryDraftRepository();
+  bool _loading = true;
+  String? _storageError;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final draft = await _repository.load();
+      if (!mounted) return;
+      setState(() {
+        if (draft != null) _apply(draft);
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _storageError = 'The saved invoice could not be read.';
+      });
+    }
+  }
+
+  void _apply(InvoiceDraft draft) {
+    _number.text = draft.number;
+    _billTo.text = draft.billTo;
+    _discount.text = draft.discount;
+    _tax.text = draft.tax;
+    _items
+      ..clear()
+      ..addAll(draft.items);
+  }
+
+  InvoiceDraft get _draft => InvoiceDraft(
+        number: _number.text,
+        billTo: _billTo.text,
+        discount: _discount.text,
+        tax: _tax.text,
+        items: List.of(_items),
+      );
+
+  Future<void> _persist() async {
+    if (_loading) return;
+    try {
+      await _repository.save(_draft);
+      if (mounted && _storageError != null) {
+        setState(() => _storageError = null);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+          () => _storageError = 'Could not save the invoice on this device.');
+    }
+  }
+
+  void _newInvoice() {
+    setState(() {
+      _apply(InvoiceDraft(number: _number.text, tax: _tax.text));
+      _itemError = null;
+    });
+    _persist();
+  }
 
   @override
   void dispose() {
@@ -56,6 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _qty.text = '1';
       _price.clear();
     });
+    if (error == null) _persist();
   }
 
   Widget _field(
@@ -74,7 +147,10 @@ class _HomeScreenState extends State<HomeScreen> {
         errorText: error,
         border: const OutlineInputBorder(),
       ),
-      onChanged: (_) => setState(() {}),
+      onChanged: (_) {
+        setState(() {});
+        _persist();
+      },
     );
   }
 
@@ -93,10 +169,30 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         : null;
     return Scaffold(
-      appBar: AppBar(title: const Text('Invoice Generator')),
+      appBar: AppBar(
+        title: const Text('Invoice Generator'),
+        actions: [
+          IconButton(
+            key: const Key('new-invoice'),
+            tooltip: 'Start a new invoice',
+            icon: const Icon(Icons.note_add_outlined),
+            onPressed: _loading ? null : _newInvoice,
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (_loading) const LinearProgressIndicator(),
+          if (_storageError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _storageError!,
+                key: const Key('storage-error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           Row(
             children: [
               Expanded(child: _field(_number, 'Invoice #')),
@@ -156,7 +252,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   IconButton(
                     tooltip: 'Remove ${item.description}',
                     icon: const Icon(Icons.close),
-                    onPressed: () => setState(() => _items.remove(item)),
+                    onPressed: () {
+                      setState(() => _items.remove(item));
+                      _persist();
+                    },
                   ),
                 ],
               ),
