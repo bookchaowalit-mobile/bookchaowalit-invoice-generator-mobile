@@ -104,13 +104,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _addItem() {
-    final qty = int.tryParse(_qty.text.trim());
+    final qty = parseQuantity(_qty.text);
     final price = parseMoneyCents(_price.text);
     String? error;
     if (_desc.text.trim().isEmpty) {
       error = 'Add a description';
-    } else if (qty == null || qty < 1 || qty > 100000) {
-      error = 'Quantity must be a whole number from 1';
+    } else if (qty == null) {
+      error = 'Quantity must be a whole number from 1 to $maxQuantity';
     } else if (price == null) {
       error = 'Enter a price like 49.99';
     }
@@ -234,9 +234,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           if (_itemError != null)
-            Text(
-              _itemError!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                _itemError!,
+                key: const Key('item-error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
           for (final item in _items)
             ListTile(

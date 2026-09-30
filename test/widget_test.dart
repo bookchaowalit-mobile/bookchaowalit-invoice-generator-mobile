@@ -47,4 +47,60 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('total')), findsNothing);
   });
+
+  Widget home({double textScale = 1}) => MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+          child: HomeScreen(clock: () => DateTime(2026, 9, 30)),
+        ),
+      );
+
+  testWidgets('decimal commas and bad quantities are rejected', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(home());
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('desc-input')), 'Logo');
+    await tester.enterText(find.byKey(const Key('qty-input')), '0x10');
+    await tester.enterText(find.byKey(const Key('price-input')), '50');
+    await tester.tap(find.byKey(const Key('add-item')));
+    await tester.pump();
+    expect(find.textContaining('Quantity must be'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('qty-input')), '1');
+    await tester.enterText(find.byKey(const Key('price-input')), '12,50');
+    await tester.tap(find.byKey(const Key('add-item')));
+    await tester.pump();
+    expect(find.text('Enter a price like 49.99'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('tax-input')), '7,5');
+    await tester.pump();
+    expect(find.byKey(const Key('total')), findsNothing);
+  });
+
+  testWidgets('meets tap-target, label and contrast guidelines', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(home());
+    await tester.pumpAndSettle();
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(textContrastGuideline));
+    handle.dispose();
+  });
+
+  testWidgets('lays out at 200% text scale on a phone without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 740);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(home(textScale: 2));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -1,6 +1,8 @@
 /// Invoice maths in integer cents plus a plain-text renderer.
 library;
 
+import 'package:characters/characters.dart';
+
 class LineItem {
   LineItem({
     required String description,
@@ -125,10 +127,17 @@ InvoiceTotals computeTotals(
   );
 }
 
-/// Parses `12`, `12.5`, `1,234.56` into cents; null if invalid or negative.
+/// Commas only as thousands separators: `1,234.56` is fine, but `12,50`
+/// must not silently become 1250.
+final _moneyPattern = RegExp(r'^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{0,2})?$');
+
+/// Parses `12`, `12.5`, `1,234.56` into cents; null if invalid, negative or
+/// using a comma as the decimal separator (`12,50`).
 int? parseMoneyCents(String input) {
+  final trimmed = input.trim();
+  if (!_moneyPattern.hasMatch(trimmed)) return null;
   final m = RegExp(r'^(\d{1,9})(?:\.(\d{0,2}))?$')
-      .firstMatch(input.trim().replaceAll(',', ''));
+      .firstMatch(trimmed.replaceAll(',', ''));
   if (m == null) return null;
   return int.parse(m.group(1)!) * 100 +
       int.parse((m.group(2) ?? '').padRight(2, '0'));
@@ -138,9 +147,23 @@ int? parseMoneyCents(String input) {
 int? parsePercentBasisPoints(String input) {
   final s = input.trim();
   if (s.isEmpty) return 0;
+  // No commas at all: `7,5` used to be read as 75%.
+  if (s.contains(',')) return null;
   final cents = parseMoneyCents(s);
   if (cents == null || cents > 10000) return null;
   return cents;
+}
+
+/// Largest quantity accepted for one line item.
+const maxQuantity = 100000;
+
+/// Parses a whole quantity from 1 to [maxQuantity] (plain digits only;
+/// `int.tryParse` would also accept `0x10` or `+5`).
+int? parseQuantity(String input) {
+  final s = input.trim();
+  if (!RegExp(r'^[0-9]{1,6}$').hasMatch(s)) return null;
+  final q = int.parse(s);
+  return q < 1 || q > maxQuantity ? null : q;
 }
 
 String formatMoney(int cents, {String currency = ''}) {
@@ -181,9 +204,10 @@ String renderPlainText({
     ..writeln('Bill to: ${billTo.trim().isEmpty ? '-' : billTo.trim()}')
     ..writeln('-' * 42);
   for (final i in items) {
-    final desc = i.description.length > 26
-        ? '${i.description.substring(0, 25)}…'
-        : i.description;
+    // Truncate by grapheme cluster so emoji and Thai marks are never cut in
+    // half (substring on UTF-16 could leave a lone surrogate).
+    final chars = i.description.characters;
+    final desc = chars.length > 26 ? '${chars.take(25)}…' : i.description;
     b.writeln(row(desc, formatMoney(i.amountCents)));
     b.writeln('  ${i.quantity} x ${formatMoney(i.unitPriceCents)}');
   }
