@@ -1,5 +1,5 @@
 name: invoice_generator
-description: "Invoice Generator — Mobile app (flutter)"
+description: "Build an invoice from line items with tax and discount, then copy a plain-text version."
 publish_to: "none"
 version: 1.0.0+1
 
@@ -9,9 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  characters: ^1.4.0
   cupertino_icons: ^1.0.8
-  go_router: ^14.2.0
-  flutter_riverpod: ^2.5.1
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

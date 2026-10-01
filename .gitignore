@@ -9,3 +9,8 @@ ios/Pods/
 **/.dart_tool/
 .idea/
 .flutter-plugins-dependencies
+
+# Android release signing (never commit)
+android/key.properties
+*.jks
+*.keystore
